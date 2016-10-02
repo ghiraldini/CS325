@@ -14,19 +14,13 @@
 // Output:    Code computes Fibonacci number
 // --------------------------------------------------------- //
 
-int fib_rec(int);
-int fib_iter(int);
+unsigned long fib_rec(unsigned long);
+unsigned long fib_iter(unsigned long);
 
 int main(int argc, char* argv[]){
-	clock_t begin = clock();
-
-	int fibIdx = strtol(argv[1], NULL, 10);
-	printf("Fibonacci Number: %i\n", fib_rec(fibIdx));	
-	
-	clock_t end = clock();
-	clock_t elapsed_t = end-begin;
-	double elapsed_time = elapsed_t / CLOCKS_PER_SEC;
-	printf("Time spent: %f\n", elapsed_time);
+	unsigned long fibIdx = strtol(argv[1], NULL, 10);
+	//printf("Fibonacci Number: %lu\n", fib_rec(fibIdx));
+	printf("Fibonacci Number: %lu\n", fib_iter(fibIdx));
 
 	return 0;
 }
@@ -34,7 +28,7 @@ int main(int argc, char* argv[]){
 // -------------------------------------- //
 // Find Fibonacci Number recursively
 // -------------------------------------- //
-int fib_rec(int n){
+unsigned long fib_rec(unsigned long n){
 	if(n == 0){
 		return 0;
 	}else if(n == 1){
@@ -47,9 +41,8 @@ int fib_rec(int n){
 // -------------------------------------- //
 // Find Fibonacci Number Iteratively
 // -------------------------------------- //
-
-int fib_iter(int n){
-	int fib = 0;
+unsigned long fib_iter(unsigned long n){
+	unsigned long fib = 0;
 	int a = 1;
 	int t = 0;
 	int k = 0;
@@ -60,6 +53,3 @@ int fib_iter(int n){
 	}
 	return fib;
 }
-	
-
-
