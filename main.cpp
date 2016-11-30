@@ -13,23 +13,43 @@
 #include <map>
 #include <algorithm>
 
-/*
+/*****************************************************************
  * Things to consider
  *    1.  Command line options
- *    2.  Nearest int? Save (x,y) as doubles and round distance?
  *
- */
+ ******************************************************************/
 
 void readFile(char *, std::vector<std::pair<int,int> > *);
 void write_file(std::ofstream *, std::vector<int>*, int);
 
-int getDistance(std::pair<int,int>, std::pair<int,int>);
-int getMinDist(std::vector<std::pair<int,int> > *, int *, int *, int);
-std::vector<int> mst(std::vector<std::pair<int,int> > *, int *);
+double getDistance(std::pair<int,int> c1, std::pair<int,int> c2){
+    double ans = sqrt( pow(c1.first - c2.first,2) + pow(c1.second - c2.second,2) );
+    //ans+=0.5;
+    return ans;
+    //return sqrt( pow(c1.first - c2.first,2) + pow(c1.second - c2.second,2) );
+}
 
+double getMinDist(std::vector<std::pair<int,int> > *,
+               int *, int *, int ,
+               std::vector<double> *,
+               std::map<double,int> *);
+
+std::vector<int> mst(std::vector<std::pair<int,int> > *, double *);
 bool myfunction (int i,int j) { return (i<j); }
+bool vertexFound(std::vector<int> , int);
 
+// GLOBAL CONSTS
+static const bool DEBUG = false;
+static const int ex_1 = 108159;
+static const int ex_2 = 2579;
+static const int ex_3 = 1573084;
 
+/******************************************************
+ * DESCRIPTION:
+ * INPUTS:
+ * OUTPUTS:
+ *
+ ******************************************************/
 int main(int argc, char* argv[])
 {
     std::ofstream outfile;
@@ -44,21 +64,112 @@ int main(int argc, char* argv[])
 	std::cout.precision(6);
 
     readFile(argv[1], &cityPair);
-    int totalDist = 0;
+    double totalDist = 0;
     std::vector<int> mstTour = mst(&cityPair, &totalDist);
 
     std::cout << "Total Dist Travel: " << totalDist << std::endl;
-    std::cout << "City Tour: " << std::endl;
-    for(unsigned int i = 0; i < mstTour.size()-1; i++){
-        std::cout << "City[" << mstTour.at(i) << "] to City[" << mstTour.at(i+1) << "]" << std::endl;
-    }
+    std::cout << "Ratio: " << (double)totalDist/ex_2;
+
     write_file(&outfile, &mstTour, totalDist);
 
     outfile.close();
 	return 0;
 }
 
+/******************************************************
+ * DESCRIPTION:
+ * INPUTS:
+ * OUTPUTS:
+ *
+ ******************************************************/
+std::vector<int> mst(std::vector<std::pair<int,int> > *cityPair, double *tDist){
+    std::vector<int> mSet;
+    mSet.push_back(0);
+    std::vector<double> tempCityVec;
+    std::map<double,int> tempCityMap;
+    int c1=0, c2=0, nextMin=0;
 
+    while(mSet.size() < cityPair->size()-1){
+        double tempDist = getMinDist(cityPair, &c1, &c2, nextMin, &tempCityVec, &tempCityMap);
+        if(!vertexFound(mSet,c2)){
+            std::sort(tempCityVec.begin(), tempCityVec.end(), myfunction);
+            c2 = tempCityMap[tempCityVec.at(nextMin)];
+            tempDist = tempCityVec.at(nextMin);
+        }
+        while(!vertexFound(mSet,c2)){
+            nextMin++;
+            c2 = tempCityMap[tempCityVec.at(nextMin)];
+            tempDist = tempCityVec.at(nextMin);
+        }
+        mSet.push_back(c2);
+        *tDist += round(tempDist);
+/*        std::cout   << "New Vertex: " << c2
+                    << "\tTour Size: " << mSet.size()
+                    << "\tDistance: " << *tDist
+                    << "\tDistance: " << round(*tDist) << std::endl;
+*/
+        tempCityVec.clear();
+        tempCityMap.clear();
+        nextMin = 0;
+        c1 = c2;
+        c2 = 0;
+    }
+    *tDist += round(getDistance(cityPair->at(mSet.size()), cityPair->at(0)));
+    return mSet;
+}
+
+/***************** HELPER FUNTIONS ********************/
+
+
+/******************************************************
+ * DESCRIPTION:
+ * INPUTS:
+ * OUTPUTS:
+ *
+ ******************************************************/
+double getMinDist(std::vector<std::pair<int,int> > *cityPair, int *startIdx, int *endCity, int nextMin,
+               std::vector<double> *cityVec, std::map<double,int> *cityMap){
+
+    double minDist = 2e8;
+    if(DEBUG) std::cout << "Looking for Min Dist from city " << *startIdx << std::endl;
+
+    for(int i = 0; i < (int)cityPair->size(); i++){
+        if(*startIdx != i){
+            // Push all distances from city1 to all cities
+            double d = getDistance(cityPair->at(*startIdx), cityPair->at(i));
+            cityVec->push_back(d); // Vector of distances
+            (*cityMap)[d] = i; // Map[dist, city]
+            minDist = std::min(minDist, d);
+        }
+    }
+    *endCity = (*cityMap)[minDist];
+    return minDist; // return min distance
+}
+
+
+/******************************************************
+ * DESCRIPTION:
+ * INPUTS:
+ * OUTPUTS:
+ *
+ ******************************************************/
+bool vertexFound(std::vector<int> mSet, int c2){
+    for(unsigned int i = 0; i < mSet.size(); i++){
+        if(c2 == mSet.at(i)){
+            if(DEBUG) std::cout << "Vertex " << c2 << " already in MAP!!!" << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+
+/******************************************************
+ * DESCRIPTION:
+ * INPUTS:
+ * OUTPUTS:
+ *
+ ******************************************************/
 void readFile(char *fileName, std::vector<std::pair<int,int> > *cityPair){
     std::ifstream file(fileName);
     std::string line;
@@ -80,81 +191,12 @@ void readFile(char *fileName, std::vector<std::pair<int,int> > *cityPair){
     return;
 }
 
-int getDistance(std::pair<int,int> c1, std::pair<int,int> c2){
-    return sqrt( pow(c1.first - c2.first,2) + pow(c1.second - c2.second,2) );
-}
-
-int getMinDist(std::vector<std::pair<int,int> > *cityPair, int *startIdx, int *endCity, int nextMin){
-    std::vector<int> mins;
-    std::map<int,int> cityMap;
-    //std::cout << "Looking for "<< nextMin <<" Min Dist from city " << *startIdx << std::endl;
-
-    for(int i = 0; i < (int)cityPair->size(); i++){
-        if(*startIdx != i){
-            // Push all distances from city1 to all cities
-            int d = getDistance(cityPair->at(*startIdx), cityPair->at(i));
-            mins.push_back(d); // Vector of dist
-            cityMap[d] = i; // Map[dist, city]
-        }
-    }
-    // Sort vector of distances to find minimums
-    std::sort(mins.begin(), mins.end(), myfunction);
-
-/*    std::cout << "Distances in order: " << std::endl;
-    for(int i = 0; i < mins.size(); i++){
-        std::cout << mins.at(i) << std::endl;
-    }
-*/
-    //std::cout << "City Idx @ dist: " << mins.at(nextMin) << " is City: " << cityMap[mins.at(nextMin)] << std::endl;
-    *endCity = cityMap[mins.at(nextMin)];
-
-    /*std::cout << "Min Distance of City[" << *startIdx
-                << "] is to \tCity[" << *endCity << "] with length:\t" << mins.at(nextMin) << std::endl;
-    */
-    return mins.at(nextMin);
-}
-
-std::vector<int> mst(std::vector<std::pair<int,int> > *cityPair, int *tDist){
-    std::vector<int> mSet;
-    mSet.push_back(0);
-    int c1=0, c2=0, nextMin=0;
-    bool vertexFound = true;
-
-    while(mSet.size() != cityPair->size()){
-        //std::cout << "Getting next Vertex" << std::endl;
-        int tempDist = getMinDist(cityPair, &c1, &c2, nextMin);
-
-        for(unsigned int i = 0; i < mSet.size(); i++){
-            if(c2 == mSet.at(i)){
-                std::cout << "Vertex " << c2 << " already in MAP!!! - Find Min " << nextMin << std::endl;
-                if(nextMin == (int)cityPair->size()-2){
-                    break;
-                }
-                nextMin++;
-                vertexFound = false;
-            }
-        }
-        if(vertexFound){
-            std::cout << "New Vertex: " << c2 << std::endl;
-            mSet.push_back(c2);
-            //totalDist += tempDist;
-            *tDist += tempDist;
-            nextMin = 0;
-            c1 = c2;
-            c2 = 0;
-        }
-        vertexFound = true;
-    }
-    /*
-    std::cout << "City Tour: " << std::endl;
-    for(unsigned int i = 0; i < mSet.size()-1; i++){
-        std::cout << "City[" << mSet.at(i) << "] to City[" << mSet.at(i+1) << "]" << std::endl;
-    } */
-    //std::cout << "Total Tour Distance: " << *tDist << std::endl;
-    return mSet;
-}
-
-
+/******************************************************
+ * DESCRIPTION:
+ * INPUTS:
+ * OUTPUTS:
+ *
+ ******************************************************/
 void write_file(std::ofstream *outfile, std::vector<int>* array, int tdist)
 {
 	std::string buffer;
